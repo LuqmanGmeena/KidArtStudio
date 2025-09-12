@@ -320,7 +320,7 @@ const DailyEnvironment: React.FC = () => {
     setShowAuth(false);
   };
 
-  const startDrawing = (template: DrawingTemplate) => {
+  const handleStartDrawingTemplate = (template: DrawingTemplate) => {
     if (!isLoggedIn) {
       setShowAuth(true);
       return;
@@ -397,7 +397,7 @@ const DailyEnvironment: React.FC = () => {
             <div
               key={template.id}
               className="bg-gray-50 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer"
-              onClick={() => startDrawing(template)}
+              onClick={() => handleStartDrawingTemplate(template)}
             >
               <div className="relative">
                 <img
