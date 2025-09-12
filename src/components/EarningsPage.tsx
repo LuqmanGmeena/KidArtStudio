@@ -10,7 +10,8 @@ import {
   PieChart,
   BarChart3,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Star
 } from 'lucide-react';
 
 const EarningsPage: React.FC = () => {

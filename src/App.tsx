@@ -24,7 +24,8 @@ import {
   Play,
   Download,
   Eye,
-  Coins
+  Coins,
+  Save
 } from 'lucide-react';
 import { userService } from './services/userService';
 import Header from './components/Header';

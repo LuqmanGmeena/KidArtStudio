@@ -12,7 +12,8 @@ import {
   Image,
   DollarSign,
   Crown,
-  Globe
+  Globe,
+  Coins
 } from 'lucide-react';
 
 interface HeaderProps {

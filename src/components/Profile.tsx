@@ -17,7 +17,8 @@ import {
   Share2,
   Plus,
   Grid,
-  List
+  List,
+  Palette
 } from 'lucide-react';
 
 const Profile: React.FC = () => {

@@ -1,5 +1,4 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { ArtworkService, Artwork } from '../services/artworkService';
 import { 
   Palette, 
   Brush, 
@@ -37,6 +36,7 @@ const DrawingCanvas: React.FC = () => {
   const [brushSize, setBrushSize] = useState(5);
   const [brushColor, setBrushColor] = useState('#000000');
   const [savedArtworks, setSavedArtworks] = useState<any[]>([]);
+  const [firebaseArtworks, setFirebaseArtworks] = useState<any[]>([]);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [artworkTitle, setArtworkTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -49,6 +49,10 @@ const DrawingCanvas: React.FC = () => {
     '#FFA500', '#800080', '#FFC0CB', '#90EE90', '#87CEEB', '#FFFFFF'
   ];
 
+  const saveToHistory = () => {
+    // Placeholder for undo/redo functionality
+    console.log('Saving to history');
+  };
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;

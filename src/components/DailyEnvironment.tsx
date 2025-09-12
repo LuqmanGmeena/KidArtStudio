@@ -35,7 +35,8 @@ import {
   Phone,
   DollarSign,
   CreditCard,
-  CheckCircle
+  CheckCircle,
+  Save
 } from 'lucide-react';
 import { Target } from 'lucide-react';
 
@@ -63,6 +64,73 @@ const DailyEnvironment: React.FC = () => {
   const [brushColor, setBrushColor] = useState('#2563eb');
   const [isDrawing, setIsDrawing] = useState(false);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
+
+  // Environment colors for drawing
+  const environmentColors = [
+    '#228B22', '#32CD32', '#90EE90', '#98FB98', // Greens
+    '#87CEEB', '#4169E1', '#0000FF', '#1E90FF', // Blues
+    '#8B4513', '#A0522D', '#D2691E', '#CD853F', // Browns
+    '#FFD700', '#FFA500', '#FF6347', '#FF4500', // Warm colors
+    '#800080', '#9370DB', '#BA55D3', '#DDA0DD', // Purples
+    '#000000', '#696969', '#A9A9A9', '#FFFFFF'  // Neutrals
+  ];
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const downloadDrawing = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = 'my-environment-drawing.png';
+    link.href = canvas.toDataURL();
+    link.click();
+  };
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setIsDrawing(true);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = brushSize;
+    if (currentTool === 'brush') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = brushColor;
+    } else if (currentTool === 'eraser') {
+      ctx.globalCompositeOperation = 'destination-out';
+    }
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
 
   const drawingTemplates: DrawingTemplate[] = [
     {
