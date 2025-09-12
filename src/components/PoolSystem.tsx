@@ -22,7 +22,7 @@ const PoolSystem: React.FC<PoolSystemProps> = ({
   isActive = false 
 }) => {
   const [poolBalance, setPoolBalance] = useState(50000); // Current pool balance
-  const [targetAmount, setTargetAmount] = useState(100000); // Target for next unlock
+  const [targetAmount, setTargetAmount] = useState(75000); // Target for next unlock
   const [totalContributors, setTotalContributors] = useState(100);
   
   const progressPercentage = (poolBalance / targetAmount) * 100;
@@ -105,11 +105,18 @@ const PoolSystem: React.FC<PoolSystemProps> = ({
 
       {/* User Contribution Status */}
       {isActive && userContribution > 0 && (
-        <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-2xl p-4">
           <div className="flex items-center justify-center text-green-700">
-            <Trophy className="w-6 h-6 mr-2" />
+            <div className="animate-bounce mr-3">
+              <Trophy className="w-6 h-6 text-yellow-500" />
+            </div>
             <span className="font-semibold">
-              Hongera! Umechangia {userContribution.toLocaleString()} Tshs kwenye pool! 🎉
+              🎉 Hongera! Umechangia {userContribution.toLocaleString()} Tshs kwenye pool!
+            </span>
+          </div>
+          <div className="text-center mt-2">
+            <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-medium">
+              ⭐ Daily Points: +100 points earned!
             </span>
           </div>
         </div>

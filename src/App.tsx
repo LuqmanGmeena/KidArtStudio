@@ -183,7 +183,12 @@ function App() {
   };
 
   const handleActivationSuccess = () => {
-    const updatedUser = { ...user, isActive: true };
+    const updatedUser = { 
+      ...user, 
+      isActive: true,
+      contribution: 500,
+      dailyPoints: 100 // Add daily reward points
+    };
     setUser(updatedUser);
     setNeedsPayment(false);
   };

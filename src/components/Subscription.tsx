@@ -58,31 +58,8 @@ const Subscription: React.FC = () => {
   };
 
   const handlePesapalPayment = async (amount: number) => {
-    try {
-      const response = await fetch('/api/pay', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: amount,
-          phone: '255700000000', // This should come from user input
-          userId: 'user123' // This should come from auth context
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (data.redirect_url) {
-        // Redirect to Pesapal payment page
-        window.location.href = data.redirect_url;
-      } else {
-        alert('Payment initialization failed. Please try again.');
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      alert('Payment failed. Please try again.');
-    }
+    // Mock payment for demo
+    alert(`🎮 Demo Payment: ${amount.toLocaleString()} Tshs\n\nThis would normally process a real payment, but this is just a demo!`);
   };
 
   return (
