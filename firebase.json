@@ -1,44 +1,237 @@
-{
-  "hosting": {
-    "public": "dist",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "rewrites": [
-      {
-        "source": "/pesapalIPN",
-        "function": "pesapalIPN"
-      },
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  },
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
-  "storage": {
-    "rules": "storage.rules"
-  },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "*.local"
-      ],
-      "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run lint",
-        "npm --prefix \"$RESOURCE_DIR\" run build"
-      ]
-    }
-  ]
+import { auth, db } from '../firebase/config';
+import { 
+  signInAnonymously,
+  User,
+  onAuthStateChanged,
+  ConfirmationResult
+} from 'firebase/auth';
+import { 
+  doc, 
+  setDoc, 
+  getDoc, 
+  updateDoc, 
+  collection,
+  query,
+  where,
+  getDocs
+} from 'firebase/firestore';
+
+export interface KidArtUser {
+  uid: string;
+  phone: string;
+  name: string;
+  email?: string;
+  isActive: boolean;
+  createdAt: string;
+  contribution: number;
+  totalArtworks: number;
 }
+
+export class UserService {
+  private recaptchaVerifier: RecaptchaVerifier | null = null;
+  private confirmationResult: ConfirmationResult | null = null;
+  private mockVerificationId: string = '';
+
+  // Mock OTP sending (no real SMS)
+  async sendOTP(phoneNumber: string): Promise<string> {
+    try {
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+        formattedPhone = '+' + formattedPhone;
+      } else if (!formattedPhone.startsWith('+255')) {
+        formattedPhone = '+255' + formattedPhone;
+      }
+
+      console.log('Sending OTP to:', formattedPhone);
+
+      // Initialize reCAPTCHA
+      const recaptcha = this.initializeRecaptcha();
+      
+      // Send SMS
+      this.confirmationResult = await signInWithPhoneNumber(auth, formattedPhone, recaptcha);
+      
+      console.log('OTP sent successfully');
+      // Generate mock verification ID
+      this.mockVerificationId = Math.random().toString(36).substring(2, 15);
+      
+      console.log('Mock OTP sent to:', phoneNumber, 'Use code: 123456');
+      return this.mockVerificationId;
+    } catch (error: any) {
+      console.error('Error sending OTP:', error);
+      
+      // Handle specific Firebase errors
+      if (error.code === 'auth/invalid-phone-number') {
+        throw new Error('Namba ya simu si sahihi. Tumia mfano: 0712345678');
+      } else if (error.code === 'auth/too-many-requests') {
+        throw new Error('Maombi mengi sana. Jaribu baada ya dakika chache.');
+      } else if (error.code === 'auth/operation-not-allowed') {
+        throw new Error('Huduma ya SMS haijawezeshwa. Wasiliana na msimamizi.');
+      } else {
+        throw new Error('Hitilafu katika kutuma OTP. Jaribu tena.');
+      }
+    }
+  }
+
+  // Mock OTP verification and anonymous sign in
+  async verifyOTP(otp: string): Promise<User> {
+    try {
+      if (!this.confirmationResult) {
+        throw new Error('Hakuna session ya uthibitisho. Tuma OTP tena.');
+      }
+
+      console.log('Verifying OTP:', otp);
+      
+      // Verify the OTP
+      const result = await this.confirmationResult.confirm(otp);
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Check mock OTP (accept 123456 or any 6-digit code for demo)
+      if (otp.length !== 6) {
+        throw new Error('OTP must be 6 digits');
+      }
+      
+      if (verificationId !== this.mockVerificationId) {
+        throw new Error('Invalid verification session');
+      }
+      
+      // Sign in anonymously for demo purposes
+      const result = await signInAnonymously(auth);
+      return result.user;
+    } catch (error: any) {
+      console.error('Error verifying OTP:', error);
+      
+      // Handle specific Firebase errors
+      if (error.code === 'auth/invalid-verification-code') {
+        throw new Error('Namba ya uthibitisho si sahihi. Jaribu tena.');
+      } else if (error.code === 'auth/code-expired') {
+        throw new Error('Namba ya uthibitisho imeisha muda. Tuma OTP mpya.');
+      } else {
+        throw new Error('Hitilafu katika kuthibitisha OTP. Jaribu tena.');
+      }
+    }
+  }
+
+  // Create user profile in Firestore
+  async createUserProfile(user: User, userData: Partial<KidArtUser>): Promise<void> {
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      const userProfile: KidArtUser = {
+        uid: user.uid,
+        phone: user.phoneNumber || '',
+        name: userData.name || 'KidArt User',
+        email: userData.email || '',
+        isActive: userData.isActive || false,
+        createdAt: new Date().toISOString(),
+        contribution: userData.contribution || 0,
+        totalArtworks: 0
+      };
+
+      await setDoc(userRef, userProfile);
+      console.log('User profile created successfully');
+    } catch (error: any) {
+      console.error('Error creating user profile:', error);
+      throw new Error('Hitilafu katika kuunda wasifu wa mtumiaji');
+    }
+  }
+
+  // Get user profile from Firestore
+  async getUserProfile(uid: string): Promise<KidArtUser | null> {
+    try {
+      const userRef = doc(db, 'users', uid);
+      const userSnap = await getDoc(userRef);
+      
+      if (userSnap.exists()) {
+        return userSnap.data() as KidArtUser;
+      }
+      return null;
+    } catch (error: any) {
+      console.error('Error getting user profile:', error);
+      return null;
+    }
+  }
+
+  // Update user activation status
+  async activateUser(uid: string, contribution: number = 500): Promise<void> {
+    try {
+      const userRef = doc(db, 'users', uid);
+      await updateDoc(userRef, {
+        isActive: true,
+        contribution: contribution
+      });
+
+      // Update community pool
+      await this.updateCommunityPool(contribution);
+      console.log('User activated successfully');
+    } catch (error: any) {
+      console.error('Error activating user:', error);
+      throw new Error('Hitilafu katika kuwezesha akaunti');
+    }
+  }
+
+  // Update community pool
+  async updateCommunityPool(amount: number): Promise<void> {
+    try {
+      const poolRef = doc(db, 'system', 'communityPool');
+      const poolSnap = await getDoc(poolRef);
+      
+      if (poolSnap.exists()) {
+        const currentPool = poolSnap.data().balance || 0;
+        await updateDoc(poolRef, {
+          balance: currentPool + amount,
+          lastUpdated: new Date().toISOString()
+        });
+      } else {
+        await setDoc(poolRef, {
+          balance: amount,
+          lastUpdated: new Date().toISOString()
+        });
+      }
+    } catch (error: any) {
+      console.error('Error updating community pool:', error);
+    }
+  }
+
+  // Get community pool balance
+  async getCommunityPool(): Promise<number> {
+    try {
+      const poolRef = doc(db, 'system', 'communityPool');
+      const poolSnap = await getDoc(poolRef);
+      
+      if (poolSnap.exists()) {
+        return poolSnap.data().balance || 0;
+      }
+      return 0;
+    } catch (error: any) {
+      console.error('Error getting community pool:', error);
+      return 0;
+    }
+  }
+
+  // Listen to auth state changes
+  onAuthStateChange(callback: (user: User | null) => void) {
+    return onAuthStateChanged(auth, callback);
+  }
+
+  // Sign out user
+  async signOut(): Promise<void> {
+    try {
+      await auth.signOut();
+      this.cleanup();
+    } catch (error: any) {
+      console.error('Error signing out:', error);
+      throw new Error('Hitilafu katika kutoka');
+    }
+  }
+
+  // Clean up reCAPTCHA
+  cleanup() {
+    if (this.recaptchaVerifier) {
+      this.recaptchaVerifier.clear();
+      this.recaptchaVerifier = null;
+    }
+    this.confirmationResult = null;
+  }
+}
+
+export const userService = new UserService();
