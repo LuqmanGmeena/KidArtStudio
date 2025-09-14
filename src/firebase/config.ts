@@ -4,14 +4,15 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
-// Your web app's Firebase configuration (from .env)
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: "AIzaSyBgVs6FRdJwEDi4QLnm8sIpSr9kO7gTp4o",
+  authDomain: "kid-art-studio.firebaseapp.com",
+  databaseURL: "https://kid-art-studio-default-rtdb.firebaseio.com",
+  projectId: "kid-art-studio",
+  storageBucket: "kid-art-studio.firebasestorage.app",
+  messagingSenderId: "633629529224",
+  appId: "1:633629529224:web:9e189ef98535a956c1fb3d"
 };
 
 // Initialize Firebase

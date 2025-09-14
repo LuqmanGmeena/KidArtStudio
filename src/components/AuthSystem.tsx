@@ -9,7 +9,8 @@ import {
   CreditCard,
   Star,
   Gift,
-  Coins
+  Coins,
+  Shield
 } from 'lucide-react';
 import { userService } from '../services/userService';
 
@@ -27,8 +28,10 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthSuccess }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [verificationId, setVerificationId] = useState('');
   const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
 
   useEffect(() => {
     // Cleanup on unmount
@@ -43,6 +46,7 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthSuccess }) => {
       [e.target.name]: e.target.value
     });
     setError('');
+    setSuccess('');
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -52,7 +56,7 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthSuccess }) => {
 
     try {
       // Validate phone number (Tanzanian format)
-      if (!formData.phone.match(/^(\+255|0)[67]\d{8}$/)) {
+      if (!formData.phone.match(/^(\+255|0|255)[67]\d{8}$/)) {
         throw new Error('Namba ya simu si sahihi. Tumia mfano: 0712345678');
       }
 
@@ -87,16 +91,15 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthSuccess }) => {
       
       // Mock payment success
       setPaymentCompleted(true);
+      setSuccess('Malipo yamekamilika! Sasa thibitisha namba ya simu.');
       
-      // Get stored user data and proceed to OTP
-      const pendingUserData = JSON.parse(localStorage.getItem('pendingUserData') || '{}');
-      if (pendingUserData.phone) {
-        setFormData(prev => ({ ...prev, ...pendingUserData }));
+      // Proceed to OTP after payment
+      setTimeout(() => {
         handleSendOTP();
-      }
+      }, 1000);
       
     } catch (error: any) {
-      setError('Payment failed. Please try again.');
+      setError('Malipo yameshindwa. Jaribu tena.');
     } finally {
       setLoading(false);
     }
@@ -105,11 +108,21 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthSuccess }) => {
   const handleSendOTP = async () => {
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
-      const verificationId = await userService.sendOTP(formData.phone);
+      const pendingUserData = JSON.parse(localStorage.getItem('pendingUserData') || '{}');
+      const phoneToUse = pendingUserData.phone || formData.phone;
+      
+      if (!phoneToUse) {
+        throw new Error('Namba ya simu haijawekwa');
+      }
+
+      const verificationId = await userService.sendOTP(phoneToUse);
       setVerificationId(verificationId);
+      setOtpSent(true);
       setAuthMode('otp');
+      setSuccess('OTP imetumwa kwenye namba yako ya simu!');
     } catch (error: any) {
       setError(error.message);
     } finally {
@@ -123,7 +136,11 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthSuccess }) => {
     setError('');
 
     try {
-      const firebaseUser = await userService.verifyOTP(verificationId, formData.otp);
+      if (!formData.otp || formData.otp.length !== 6) {
+        throw new Error('Weka namba ya uthibitisho ya tarakimu 6');
+      }
+
+      const firebaseUser = await userService.verifyOTP(formData.otp);
       
       // Get stored user data
       const pendingUserData = JSON.parse(localStorage.getItem('pendingUserData') || '{}');
@@ -142,16 +159,21 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthSuccess }) => {
         phone: firebaseUser.phoneNumber,
         name: pendingUserData.name || 'KidArt User',
         email: pendingUserData.email || '',
-        isActive: true, // Active because payment was completed
+        isActive: true,
         createdAt: new Date().toISOString(),
-        contribution: 500 // Added to community pool
+        contribution: 500,
+        dailyPoints: 100
       };
 
       // Clean up
       localStorage.removeItem('pendingUserData');
       userService.cleanup();
 
-      onAuthSuccess(userData);
+      setSuccess('Hongera! Akaunti yako imeanzishwa!');
+      
+      setTimeout(() => {
+        onAuthSuccess(userData);
+      }, 1500);
       
     } catch (error: any) {
       setError(error.message);
@@ -163,7 +185,7 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthSuccess }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md">
-        {/* reCAPTCHA container */}
+        {/* reCAPTCHA container - invisible */}
         <div id="recaptcha-container"></div>
         
         {/* Header */}
@@ -179,19 +201,19 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthSuccess }) => {
           </p>
         </div>
 
+        {/* Success Message */}
+        {success && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 flex items-center">
+            <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+            <span className="text-green-700 text-sm">{success}</span>
+          </div>
+        )}
+
         {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-center">
             <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
             <span className="text-red-700 text-sm">{error}</span>
-          </div>
-        )}
-
-        {/* Payment Success Message */}
-        {paymentCompleted && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 flex items-center">
-            <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
-            <span className="text-green-700 text-sm">Malipo yamekamilika! Sasa thibitisha namba ya simu.</span>
           </div>
         )}
 
@@ -232,11 +254,14 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthSuccess }) => {
                   required
                 />
               </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Mfano: 0712345678 au +255712345678
+              </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email (Optional)
+                Email (Hiari)
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -281,7 +306,6 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthSuccess }) => {
               <div className="text-3xl font-bold text-green-700 mb-2">Tshs 500/=</div>
               <div className="text-green-600 text-sm mb-3">Activation Fee</div>
               
-              {/* Mock Benefits */}
               <div className="space-y-2 text-sm text-gray-700">
                 <div className="flex items-center justify-center space-x-2">
                   <Star className="w-4 h-4 text-yellow-500" />
@@ -306,19 +330,22 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthSuccess }) => {
               {loading ? (
                 <>
                   <Loader className="w-5 h-5 animate-spin mr-2" />
-                  <span>Processing...</span>
+                  <span>Inachakata...</span>
                 </>
               ) : (
                 <>
                   <Coins className="w-5 h-5 mr-2" />
-                  <span>Pay Now (Mock)</span>
+                  <span>Lipa Sasa (Demo)</span>
                 </>
               )}
             </button>
             
-            <p className="text-xs text-gray-500 mt-3">
-              🎮 This is a demo payment - no real money charged!
-            </p>
+            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <div className="flex items-center text-yellow-700 text-sm">
+                <Shield className="w-4 h-4 mr-2" />
+                <span>🎮 Hii ni demo - hakuna pesa halisi itatolewa!</span>
+              </div>
+            </div>
           </div>
         )}
 
@@ -328,8 +355,13 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthSuccess }) => {
             <div className="text-center mb-4">
               <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
               <p className="text-sm text-gray-600">
-                Tumekutumia namba ya uthibitisho kwenye {formData.phone}
+                Tumekutumia namba ya uthibitisho kwenye simu yako
               </p>
+              {formData.phone && (
+                <p className="text-sm font-medium text-gray-800">
+                  {formData.phone}
+                </p>
+              )}
             </div>
 
             <div>
@@ -343,18 +375,24 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthSuccess }) => {
                 onChange={handleInputChange}
                 placeholder="123456"
                 maxLength={6}
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-center text-lg font-mono"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-center text-lg font-mono tracking-widest"
                 required
               />
+              <p className="text-xs text-gray-500 mt-1 text-center">
+                Weka namba ya tarakimu 6 uliyopokea
+              </p>
             </div>
 
             <button
               type="submit"
-              disabled={loading}
-              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-2 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center"
+              disabled={loading || formData.otp.length !== 6}
+              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-3 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center"
             >
               {loading ? (
-                <Loader className="w-5 h-5 animate-spin" />
+                <>
+                  <Loader className="w-5 h-5 animate-spin mr-2" />
+                  <span>Inathibitisha...</span>
+                </>
               ) : (
                 'Thibitisha na Ingia'
               )}
@@ -365,7 +403,7 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthSuccess }) => {
                 type="button"
                 onClick={handleSendOTP}
                 disabled={loading}
-                className="text-purple-600 hover:text-purple-700 text-sm font-medium"
+                className="text-purple-600 hover:text-purple-700 text-sm font-medium disabled:text-gray-400"
               >
                 Hujapokea? Tuma tena
               </button>
